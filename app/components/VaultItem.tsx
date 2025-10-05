@@ -3,18 +3,29 @@
 import { useState, useEffect } from 'react';
 import { clientDecrypt } from '../lib/encryption';
 
+// Define the proper interfaces
+interface VaultItemData {
+  _id: string;
+  title: string;
+  username: string;
+  password: string;
+  url: string;
+  notes: string;
+  createdAt: string;
+}
+
+interface UpdatedItemData {
+  title: string;
+  username: string;
+  password: string;
+  url: string;
+  notes: string;
+}
+
 interface VaultItemProps {
-  item: {
-    _id: string;
-    title: string;
-    username: string;
-    password: string;
-    url: string;
-    notes: string;
-    createdAt: string;
-  };
+  item: VaultItemData;
   onDelete: (itemId: string) => void;
-  onUpdate: (itemId: string, updatedItem: any) => void;
+  onUpdate: (itemId: string, updatedItem: UpdatedItemData) => void; // Fixed: Replace 'any' with proper type
 }
 
 export default function VaultItem({ item, onDelete, onUpdate }: VaultItemProps) {
@@ -117,7 +128,7 @@ export default function VaultItem({ item, onDelete, onUpdate }: VaultItemProps) 
     try {
       const token = localStorage.getItem('token');
       
-      const encryptedData = {
+      const encryptedData: UpdatedItemData = {
         title: editForm.title,
         username: editForm.username,
         password: editForm.password,
