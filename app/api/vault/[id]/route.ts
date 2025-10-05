@@ -19,10 +19,13 @@ function verifyToken(token: string) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // Fixed: params is now a Promise
 ) {
   try {
     await connectDB();
+    
+    // Await the params Promise
+    const resolvedParams = await params;
     
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -33,14 +36,14 @@ export async function GET(
     const decoded = verifyToken(token);
     const userId = (decoded as { userId: string }).userId;
 
-    const vaultItem = await VaultItem.findOne({ _id: params.id, userId });
+    const vaultItem = await VaultItem.findOne({ _id: resolvedParams.id, userId });
 
     if (!vaultItem) {
       return NextResponse.json({ error: 'Vault item not found' }, { status: 404 });
     }
 
     return NextResponse.json(vaultItem);
-  } catch (error: unknown) {  // Fixed: Properly type the error
+  } catch (error: unknown) {
     console.error('Vault GET error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -55,10 +58,13 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // Fixed: params is now a Promise
 ) {
   try {
     await connectDB();
+    
+    // Await the params Promise
+    const resolvedParams = await params;
     
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -73,7 +79,7 @@ export async function PUT(
     const { title, username, password, url, notes } = body;
 
     const updatedVaultItem = await VaultItem.findOneAndUpdate(
-      { _id: params.id, userId },
+      { _id: resolvedParams.id, userId },
       { title, username, password, url, notes },
       { new: true }
     );
@@ -83,7 +89,7 @@ export async function PUT(
     }
 
     return NextResponse.json(updatedVaultItem);
-  } catch (error: unknown) {  // Fixed: Properly type the error
+  } catch (error: unknown) {
     console.error('Vault PUT error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -98,10 +104,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // Fixed: params is now a Promise
 ) {
   try {
     await connectDB();
+    
+    // Await the params Promise
+    const resolvedParams = await params;
     
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -113,7 +122,7 @@ export async function DELETE(
     const userId = (decoded as { userId: string }).userId;
 
     const deletedVaultItem = await VaultItem.findOneAndDelete({
-      _id: params.id,
+      _id: resolvedParams.id,
       userId,
     });
 
@@ -122,7 +131,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Vault item deleted successfully' });
-  } catch (error: unknown) {  // Fixed: Properly type the error
+  } catch (error: unknown) {
     console.error('Vault DELETE error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
