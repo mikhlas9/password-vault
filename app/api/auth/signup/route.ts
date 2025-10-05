@@ -7,23 +7,25 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    await connectDB();
-    
-    const user = await User.findOne({ email });
-    if (!user) {
+    if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
       );
     }
 
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
+    await connectDB();
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
+        { error: 'User already exists' },
+        { status: 409 }
       );
     }
+
+    const user = new User({ email, password });
+    await user.save();
 
     const token = jwt.sign(
       { userId: user._id, email: user.email },
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Signup error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
