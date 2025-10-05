@@ -1,91 +1,136 @@
-import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
 import VaultItem from '../../../lib/models/VaultItem';
-import { clientEncrypt } from '../../../lib/encryption';
+import jwt from 'jsonwebtoken';
 
-const getUserFromToken = (request: Request) => {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('No token provided');
+// Define proper error interface
+interface ApiError extends Error {
+  status?: number;
+  code?: string;
+}
+
+// Helper function to verify JWT token
+function verifyToken(token: string) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not defined');
   }
+  return jwt.verify(token, process.env.JWT_SECRET);
+}
 
-  const token = authHeader.substring(7);
-  const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-  return decoded;
-};
-
-export async function PUT(
-  request: Request,
+export async function GET(
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = getUserFromToken(request);
-    const { title, username, password, url, notes } = await request.json();
-
     await connectDB();
+    
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Encrypt password and notes server-side as well for double encryption
-    const userEmail = user.email;
-    const encryptedPassword = clientEncrypt(password, userEmail);
-    const encryptedNotes = notes ? clientEncrypt(notes, userEmail) : '';
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token);
+    const userId = (decoded as { userId: string }).userId;
 
-    const vaultItem = await VaultItem.findOneAndUpdate(
-      { _id: params.id, userId: user.userId },
-      {
-        title,
-        username,
-        password: encryptedPassword,
-        url,
-        notes: encryptedNotes,
-        updatedAt: new Date(),
-      },
-      { new: true }
-    );
+    const vaultItem = await VaultItem.findOne({ _id: params.id, userId });
 
     if (!vaultItem) {
-      return NextResponse.json(
-        { error: 'Item not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Vault item not found' }, { status: 404 });
     }
 
     return NextResponse.json(vaultItem);
-  } catch (error) {
-    console.error('Update vault item error:', error);
+  } catch (error: unknown) {  // Fixed: Properly type the error
+    console.error('Vault GET error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = (error as ApiError).status || 500;
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await connectDB();
+    
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token);
+    const userId = (decoded as { userId: string }).userId;
+
+    const body = await request.json();
+    const { title, username, password, url, notes } = body;
+
+    const updatedVaultItem = await VaultItem.findOneAndUpdate(
+      { _id: params.id, userId },
+      { title, username, password, url, notes },
+      { new: true }
+    );
+
+    if (!updatedVaultItem) {
+      return NextResponse.json({ error: 'Vault item not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(updatedVaultItem);
+  } catch (error: unknown) {  // Fixed: Properly type the error
+    console.error('Vault PUT error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = (error as ApiError).status || 500;
+    
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: statusCode }
     );
   }
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = getUserFromToken(request);
     await connectDB();
-
-    const vaultItem = await VaultItem.findOneAndDelete({
-      _id: params.id,
-      userId: user.userId,
-    });
-
-    if (!vaultItem) {
-      return NextResponse.json(
-        { error: 'Item not found' },
-        { status: 404 }
-      );
+    
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    return NextResponse.json({ message: 'Item deleted successfully' });
-  } catch (error) {
-    console.error('Delete vault item error:', error);
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token);
+    const userId = (decoded as { userId: string }).userId;
+
+    const deletedVaultItem = await VaultItem.findOneAndDelete({
+      _id: params.id,
+      userId,
+    });
+
+    if (!deletedVaultItem) {
+      return NextResponse.json({ error: 'Vault item not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Vault item deleted successfully' });
+  } catch (error: unknown) {  // Fixed: Properly type the error
+    console.error('Vault DELETE error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = (error as ApiError).status || 500;
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
     );
   }
 }
