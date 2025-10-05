@@ -1,8 +1,20 @@
-import mongoose from 'mongoose';
+// app/lib/models/VaultItem.ts
+import mongoose, { Document, Schema } from 'mongoose';
 
-const VaultItemSchema = new mongoose.Schema({
+export interface IVaultItem extends Document {
+  userId: mongoose.Types.ObjectId;
+  title: string;
+  username: string;
+  password: string; // This will be encrypted
+  url: string;
+  notes: string; // This will be encrypted
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const VaultItemSchema = new Schema<IVaultItem>({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
@@ -26,18 +38,10 @@ const VaultItemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
+}, {
+  timestamps: true,
 });
 
-VaultItemSchema.pre('save', function () {
-  this.updatedAt = new Date();
-});
+const VaultItem = mongoose.models.VaultItem || mongoose.model<IVaultItem>('VaultItem', VaultItemSchema);
 
-export default mongoose.models.VaultItem || mongoose.model('VaultItem', VaultItemSchema);
+export default VaultItem;

@@ -150,7 +150,7 @@ export default function Home() {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Military-Grade Security</h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                   Your passwords are encrypted client-side with AES-256 encryption before being stored. 
-                  We can't see your data, and neither can anyone else.
+                  We can&apos;t see your data, and neither can anyone else.
                 </p>
               </div>
             </div>

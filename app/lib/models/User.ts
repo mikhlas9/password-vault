@@ -1,37 +1,30 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+// app/lib/models/User.ts
+import mongoose, { Document, Schema } from 'mongoose';
 
-const UserSchema = new mongoose.Schema({
+// Define the User interface
+export interface IUser extends Document {
+  email: string;
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Create the schema with proper TypeScript typing
+const UserSchema = new Schema<IUser>({
   email: {
     type: String,
     required: true,
     unique: true,
-    lowercase: true,
   },
   password: {
     type: String,
     required: true,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+}, {
+  timestamps: true,
 });
 
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error: any) {
-    next(error);
-  }
-});
+// Export the model with proper typing
+const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
-UserSchema.methods.comparePassword = async function (candidatePassword: string) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-export default mongoose.models.User || mongoose.model('User', UserSchema);
+export default User;
