@@ -3,6 +3,18 @@ import { VaultItemDecrypted } from './types';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-please-change-this-key';
 
+// Type for encrypted vault item (before decryption)
+interface VaultItemEncrypted {
+  _id?: string;
+  title: string;
+  username: string;
+  password: string;
+  url?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export const encrypt = (text: string, key?: string): string => {
   try {
     const encryptionKey = key || ENCRYPTION_KEY;
@@ -35,7 +47,7 @@ export const decrypt = (encryptedText: string, key?: string): string => {
 export const encryptVaultItem = (
   item: Omit<VaultItemDecrypted, '_id' | 'createdAt' | 'updatedAt'>,
   userKey: string
-): any => {
+): Omit<VaultItemEncrypted, '_id' | 'createdAt' | 'updatedAt'> => {
   return {
     title: encrypt(item.title, userKey),
     username: encrypt(item.username, userKey),
@@ -46,7 +58,7 @@ export const encryptVaultItem = (
 };
 
 // Decrypt vault item fields
-export const decryptVaultItem = (item: any, userKey: string): VaultItemDecrypted => {
+export const decryptVaultItem = (item: VaultItemEncrypted, userKey: string): VaultItemDecrypted => {
   try {
     return {
       _id: item._id?.toString(),
